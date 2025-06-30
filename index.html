@@ -50,7 +50,7 @@
       try {
         const form = new FormData();
         form.append('image', currentBlob || imageInput.files[0]);
-        const res = await fetch('/.netlify/functions/userapi-proxy', {
+        const res = await fetch('/.netlify/functions/userapi-proxy-background', {
           method: 'POST',
           body: form
         });
