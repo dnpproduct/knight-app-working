@@ -1,15 +1,14 @@
-
 const fetch = require('node-fetch');
 const FormData = require('form-data');
 const Busboy = require('busboy');
 
 const API_KEY = "76e6b884-9275-4b19-9ffc-71ec5a57dd69";
-const ACCOUNT_HASH = "ed8e5870-34c1-4674-9c88-7af403a034e3"; // Please use full value if possible
+const ACCOUNT_HASH = "ed8e5870-34c1-467...9c88-7af403a034e3"; // Please use full value if possible
 
 const POSITIVE_PROMPT = "KEEP the original person's face, facial features, skin, body, hair, and unique identity unchanged. Only change their clothing to ornate medieval knight armor and their background to an epic fantasy castle with a dramatic sky. Ultra detailed, high quality, photorealistic, masterpiece, realistic lighting.";
 const NEGATIVE_PROMPT = "changing face, different facial features, altered appearance, different skin tone, different person, face swap, cartoon, painting, illustration, blurry, distorted, bad anatomy, duplicate, extra arms, extra legs, missing limbs, watermark, text, extra fingers, uncanny, ai artifact";
 
-const IMGBB_API_KEY = "7a566f5e8bf791553a496e3c7c9e73c1"; // Go to https://imgbb.com/ to get a free key and insert here
+const IMGBB_API_KEY = "YOUR_IMGBB_API_KEY"; // Go to https://imgbb.com/ to get a free key and insert here
 
 async function uploadToImgBB(imageBuffer) {
   const form = new FormData();
@@ -26,8 +25,8 @@ exports.handler = async function(event, context) {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
 
-  // Parse multipart/form-data robustly using busboy
-  const busboy = new Busboy({ headers: event.headers });
+  // Updated: Use Busboy as a function, not a constructor!
+  const busboy = Busboy({ headers: event.headers });
   let fileBuffer = Buffer.alloc(0);
   let fileFound = false;
 
