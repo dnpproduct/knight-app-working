@@ -2,172 +2,131 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Knightify Me!</title>
+  <title>Knightify Me – Medieval AI Photo Booth</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: Arial, sans-serif; background: #20242e; color: #eee; margin: 0; min-height: 100vh; }
-    .container { max-width: 440px; margin: 40px auto; background: #222c3a; border-radius: 16px; box-shadow: 0 0 16px #0006; padding: 32px 24px; }
-    h1 { text-align: center; font-size: 2em; letter-spacing: 2px; margin-bottom: 24px; color: #ffa000; }
-    .filebox { background: #283347; border-radius: 10px; padding: 20px; text-align: center; }
-    input[type="file"] { margin: 10px 0; }
-    #previewImage { max-width: 100%; margin-top: 10px; border-radius: 10px; box-shadow: 0 0 8px #0008; }
-    #sendBtn, #webcamBtn, #resetBtn { margin: 12px 8px 0 0; padding: 12px 24px; background: #ffa000; border: none; border-radius: 6px; color: #222; font-weight: bold; font-size: 1em; cursor: pointer; transition: background 0.2s; }
-    #sendBtn[disabled] { background: #bca36a; cursor: not-allowed; }
-    #resultSection { margin-top: 30px; display: none; text-align: center; }
-    #resultImage { max-width: 100%; border-radius: 12px; box-shadow: 0 0 18px #000b; margin-top: 6px; }
-    #loading { display: none; text-align: center; margin-top: 20px; }
-    .spinner { border: 5px solid #444; border-top: 5px solid #ffa000; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 12px; }
-    @keyframes spin { 100% { transform: rotate(360deg); } }
-    .error { color: #ff3e3e; margin: 12px 0 0 0; text-align: center; }
+    body { font-family:sans-serif; background:#171823; color:#fff; padding:0; margin:0; }
+    .container { max-width:430px; margin:40px auto; background:#22243a; border-radius:16px; padding:32px; box-shadow:0 8px 30px #0007;}
+    h1 { color:#ffe75a; font-size:2em; text-align:center; margin-bottom:10px; }
+    p { text-align:center; color:#ccc; margin-bottom:28px;}
+    .file-box { background:#191c30; border-radius:10px; padding:18px; margin-bottom:16px; text-align:center; }
+    input[type="file"] { margin:12px 0 12px 0; }
+    button { background:#ffc107; color:#191c30; border:none; border-radius:7px; padding:12px 24px; font-weight:bold; cursor:pointer; margin-top:12px;}
+    button:disabled { opacity:0.6;}
+    #resultSection { display:none; text-align:center; margin-top:32px; }
+    #resultImage { max-width:100%; border-radius:12px; box-shadow:0 2px 8px #000b;}
+    .loading { text-align:center; margin:16px 0;}
+    #webcamVideo { display:none; margin:10px 0; border-radius:7px; }
+    .error { color:#ff7373; margin:10px 0; text-align:center;}
   </style>
 </head>
 <body>
   <div class="container">
     <h1>🛡️ Knightify Me!</h1>
+    <p>Turn your photo into a <b>realistic medieval knight</b>.<br>
+    Your face, identity, skin, & features will remain unchanged—only the outfit and background become epic!
+    </p>
 
-    <div class="filebox">
-      <label><b>Step 1:</b> Choose or take a photo<br>
-        <input type="file" id="fileInput" accept="image/*" capture="environment">
-      </label>
-      <br>
-      <button id="webcamBtn" type="button">📷 Take Photo (Webcam)</button>
-      <video id="webcamVideo" width="320" height="240" autoplay style="display:none; margin:10px auto 0 auto; border-radius:8px;"></video>
-      <canvas id="webcamCanvas" width="320" height="240" style="display:none;"></canvas>
-      <br>
-      <img id="previewImage" src="" alt="Preview" style="display:none;">
-      <br>
-      <button id="sendBtn" disabled>Send to AI</button>
-      <button id="resetBtn" style="display:none;">Reset</button>
-      <div id="loading">
-        <div class="spinner"></div>
-        <div>Waiting for the magic...<br>Please wait, this can take up to a minute.</div>
-      </div>
-      <div id="errorMsg" class="error"></div>
+    <div class="file-box">
+      <b>1. Upload a Photo<br>or Use Your Webcam</b><br>
+      <input type="file" id="fileInput" accept="image/*"><br>
+      <button onclick="startWebcam()" id="webcamBtn">Use Webcam</button>
+      <video id="webcamVideo" width="320" height="240" autoplay muted></video><br>
+      <button onclick="captureWebcam()" id="captureBtn" style="display:none;">Capture Photo</button>
+    </div>
+
+    <div class="file-box">
+      <b>2. Transform Image</b><br>
+      <button onclick="handleUpload()" id="uploadBtn">Go Medieval!</button>
+      <div class="loading" id="loading" style="display:none">⏳ Please wait, generating...</div>
+      <div class="error" id="error"></div>
     </div>
 
     <div id="resultSection">
-      <h2>✨ Your Knightified Portrait</h2>
-      <img id="resultImage" src="" alt="Knight AI Result">
+      <h2>Your Knighted Image:</h2>
+      <img id="resultImage" src="" alt="Medieval Knightified Photo">
       <br>
-      <a id="downloadBtn" href="#" download="knightified.jpg" style="display:block; margin:14px auto 0 auto; color:#ffa000; text-decoration:none; font-weight:bold;">Download Image</a>
+      <a id="downloadLink" href="#" download="knightified.png"><button>Download Image</button></a>
     </div>
   </div>
-
   <script>
-    const fileInput = document.getElementById('fileInput');
-    const previewImage = document.getElementById('previewImage');
-    const sendBtn = document.getElementById('sendBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const loading = document.getElementById('loading');
-    const errorMsg = document.getElementById('errorMsg');
-    const resultSection = document.getElementById('resultSection');
-    const resultImage = document.getElementById('resultImage');
-    const downloadBtn = document.getElementById('downloadBtn');
     let selectedFile = null;
+    let webcamStream = null;
 
-    // --- Handle file upload
-    fileInput.addEventListener('change', function() {
-      resetAll();
-      if (fileInput.files.length > 0) {
-        selectedFile = fileInput.files[0];
-        previewImage.src = URL.createObjectURL(selectedFile);
-        previewImage.style.display = 'block';
-        sendBtn.disabled = false;
-        resetBtn.style.display = 'inline-block';
-      }
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+      selectedFile = e.target.files[0];
+      document.getElementById('error').textContent = '';
+      stopWebcam();
     });
 
-    // --- Webcam capture
-    const webcamBtn = document.getElementById('webcamBtn');
-    const webcamVideo = document.getElementById('webcamVideo');
-    const webcamCanvas = document.getElementById('webcamCanvas');
-    let stream = null;
+    // Webcam support
+    function startWebcam() {
+      navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+        webcamStream = stream;
+        const video = document.getElementById('webcamVideo');
+        video.srcObject = stream;
+        video.style.display = 'block';
+        document.getElementById('captureBtn').style.display = 'inline-block';
+      }).catch(() => {
+        document.getElementById('error').textContent = 'Camera not available.';
+      });
+    }
+    function stopWebcam() {
+      const video = document.getElementById('webcamVideo');
+      video.style.display = 'none';
+      document.getElementById('captureBtn').style.display = 'none';
+      if(webcamStream) webcamStream.getTracks().forEach(t=>t.stop());
+    }
+    function captureWebcam() {
+      const video = document.getElementById('webcamVideo');
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
+      canvas.toBlob(blob=>{
+        selectedFile = new File([blob],'webcam.jpg',{type:'image/jpeg'});
+        document.getElementById('fileInput').value = "";
+        document.getElementById('error').textContent = '';
+        stopWebcam();
+      },'image/jpeg',0.95);
+    }
 
-    webcamBtn.addEventListener('click', async () => {
-      resetAll();
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          webcamVideo.srcObject = stream;
-          webcamVideo.style.display = 'block';
-          webcamCanvas.style.display = 'none';
-          sendBtn.disabled = false;
-          previewImage.style.display = 'none';
-
-          // When the video is clicked, take a photo
-          webcamVideo.onclick = () => {
-            webcamCanvas.getContext('2d').drawImage(webcamVideo, 0, 0, webcamCanvas.width, webcamCanvas.height);
-            webcamCanvas.toBlob(blob => {
-              selectedFile = new File([blob], "webcam.jpg", { type: "image/jpeg" });
-              previewImage.src = URL.createObjectURL(selectedFile);
-              previewImage.style.display = 'block';
-              webcamVideo.style.display = 'none';
-              webcamCanvas.style.display = 'none';
-              if (stream) { stream.getTracks().forEach(track => track.stop()); stream = null; }
-            }, "image/jpeg");
-          };
-          errorMsg.textContent = "Click the webcam video to capture!";
-        } catch (err) {
-          errorMsg.textContent = "Webcam not available or permission denied.";
-        }
-      } else {
-        errorMsg.textContent = "Webcam not supported on this device.";
-      }
-    });
-
-    // --- Handle Send to AI button
-    sendBtn.addEventListener('click', () => {
-      errorMsg.textContent = '';
-      if (!selectedFile) {
-        errorMsg.textContent = "Please choose or take a photo first.";
+    // Main upload/transform button logic
+    async function handleUpload() {
+      document.getElementById('error').textContent = '';
+      if(!selectedFile) {
+        document.getElementById('error').textContent = "Please upload a photo or take one with webcam.";
         return;
       }
-      sendBtn.disabled = true;
-      loading.style.display = 'block';
-      resultSection.style.display = 'none';
+      document.getElementById('loading').style.display = '';
+      document.getElementById('uploadBtn').disabled = true;
+      document.getElementById('resultSection').style.display = 'none';
 
-      const formData = new FormData();
-      formData.append('file', selectedFile);
+      try {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
 
-      fetch('/.netlify/functions/userapi-proxy-background', {
-        method: 'POST',
-        body: formData
-      })
-      .then(response => response.json())
-      .then(data => {
-        loading.style.display = 'none';
-        sendBtn.disabled = false;
-        if (data.image) {
-          resultImage.src = data.image;
-          resultSection.style.display = 'block';
-          downloadBtn.href = data.image;
-          errorMsg.textContent = '';
-        } else if (data.error) {
-          errorMsg.textContent = "AI Error: " + data.error;
+        const resp = await fetch('/.netlify/functions/userapi-proxy-background', {
+          method: 'POST',
+          body: formData
+        });
+
+        if(!resp.ok) throw new Error("Server error. Please try again.");
+        const data = await resp.json();
+        if(data.imageUrl) {
+          document.getElementById('resultImage').src = data.imageUrl;
+          document.getElementById('downloadLink').href = data.imageUrl;
+          document.getElementById('resultSection').style.display = '';
         } else {
-          errorMsg.textContent = "Unknown error. Please try again.";
+          throw new Error("No image returned. " + JSON.stringify(data));
         }
-      })
-      .catch(err => {
-        loading.style.display = 'none';
-        sendBtn.disabled = false;
-        errorMsg.textContent = "Network or server error: " + err;
-      });
-    });
-
-    // --- Reset everything
-    function resetAll() {
-      previewImage.src = '';
-      previewImage.style.display = 'none';
-      sendBtn.disabled = true;
-      errorMsg.textContent = '';
-      resultSection.style.display = 'none';
-      if (stream) { stream.getTracks().forEach(track => track.stop()); stream = null; }
-      webcamVideo.style.display = 'none';
-      webcamCanvas.style.display = 'none';
+      } catch(err) {
+        document.getElementById('error').textContent = err.message;
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('uploadBtn').disabled = false;
+      }
     }
-    resetBtn.addEventListener('click', resetAll);
-
-    // --- Download button handled automatically via href
   </script>
 </body>
 </html>
