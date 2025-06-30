@@ -1,132 +1,252 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Knightify Me – Medieval AI Photo Booth</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Knight Photo Booth</title>
   <style>
-    body { font-family:sans-serif; background:#171823; color:#fff; padding:0; margin:0; }
-    .container { max-width:430px; margin:40px auto; background:#22243a; border-radius:16px; padding:32px; box-shadow:0 8px 30px #0007;}
-    h1 { color:#ffe75a; font-size:2em; text-align:center; margin-bottom:10px; }
-    p { text-align:center; color:#ccc; margin-bottom:28px;}
-    .file-box { background:#191c30; border-radius:10px; padding:18px; margin-bottom:16px; text-align:center; }
-    input[type="file"] { margin:12px 0 12px 0; }
-    button { background:#ffc107; color:#191c30; border:none; border-radius:7px; padding:12px 24px; font-weight:bold; cursor:pointer; margin-top:12px;}
-    button:disabled { opacity:0.6;}
-    #resultSection { display:none; text-align:center; margin-top:32px; }
-    #resultImage { max-width:100%; border-radius:12px; box-shadow:0 2px 8px #000b;}
-    .loading { text-align:center; margin:16px 0;}
-    #webcamVideo { display:none; margin:10px 0; border-radius:7px; }
-    .error { color:#ff7373; margin:10px 0; text-align:center;}
+    body {
+      background: #101022;
+      color: #fff;
+      font-family: sans-serif;
+      margin: 0; padding: 0;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 450px;
+      margin: 30px auto;
+      background: #18182c;
+      border-radius: 16px;
+      padding: 2em;
+      box-shadow: 0 4px 32px #0008;
+      text-align: center;
+    }
+    input, button, select {
+      font-size: 1em;
+      margin: 8px 0;
+      padding: 0.7em;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+    }
+    input[type="file"] { background: #232345; color: #fff; }
+    button {
+      background: #ffdd57;
+      color: #242424;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 1em;
+      width: 100%;
+    }
+    button:disabled { opacity: 0.5; }
+    .preview {
+      margin: 1em 0;
+    }
+    .preview img {
+      max-width: 100%;
+      border-radius: 12px;
+      margin-top: 0.5em;
+      box-shadow: 0 0 16px #2226;
+    }
+    .loader {
+      margin: 2em 0;
+      font-size: 1.2em;
+      color: #ffdd57;
+    }
+    .error {
+      color: #ff6060;
+      background: #220000;
+      padding: 1em;
+      border-radius: 10px;
+      margin: 1em 0;
+    }
+    .result {
+      margin: 2em 0 1em 0;
+    }
+    video { max-width: 100%; border-radius: 10px; }
+    .row {
+      display: flex; gap: 8px; justify-content: center; margin: 1em 0;
+    }
+    .row button { flex: 1; min-width: 0; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>🛡️ Knightify Me!</h1>
-    <p>Turn your photo into a <b>realistic medieval knight</b>.<br>
-    Your face, identity, skin, & features will remain unchanged—only the outfit and background become epic!
-    </p>
+    <h2>Become a Knight!</h2>
+    <p>Upload or take a photo—transform yourself into a medieval knight using AI (Midjourney v7 omni reference)</p>
 
-    <div class="file-box">
-      <b>1. Upload a Photo<br>or Use Your Webcam</b><br>
-      <input type="file" id="fileInput" accept="image/*"><br>
-      <button onclick="startWebcam()" id="webcamBtn">Use Webcam</button>
-      <video id="webcamVideo" width="320" height="240" autoplay muted></video><br>
-      <button onclick="captureWebcam()" id="captureBtn" style="display:none;">Capture Photo</button>
+    <div id="uploadUI">
+      <input type="file" id="fileInput" accept="image/*"/>
+      <div style="margin:1em 0">or</div>
+      <button id="webcamBtn" type="button">Use Webcam</button>
     </div>
 
-    <div class="file-box">
-      <b>2. Transform Image</b><br>
-      <button onclick="handleUpload()" id="uploadBtn">Go Medieval!</button>
-      <div class="loading" id="loading" style="display:none">⏳ Please wait, generating...</div>
-      <div class="error" id="error"></div>
+    <div id="webcamUI" style="display:none">
+      <video id="webcamVideo" autoplay playsinline></video>
+      <div class="row">
+        <button id="captureBtn" type="button">Capture Photo</button>
+        <button id="closeWebcamBtn" type="button">Cancel</button>
+      </div>
     </div>
 
-    <div id="resultSection">
-      <h2>Your Knighted Image:</h2>
-      <img id="resultImage" src="" alt="Medieval Knightified Photo">
-      <br>
-      <a id="downloadLink" href="#" download="knightified.png"><button>Download Image</button></a>
-    </div>
+    <div class="preview" id="previewDiv" style="display:none"></div>
+
+    <button id="submitBtn" disabled>Transform to Knight</button>
+
+    <div class="loader" id="loader" style="display:none"></div>
+    <div class="error" id="error" style="display:none"></div>
+    <div class="result" id="resultDiv" style="display:none"></div>
+    <button id="resetBtn" style="display:none">Start Over</button>
   </div>
   <script>
-    let selectedFile = null;
+    // Selectors
+    const fileInput = document.getElementById('fileInput');
+    const webcamBtn = document.getElementById('webcamBtn');
+    const webcamUI = document.getElementById('webcamUI');
+    const webcamVideo = document.getElementById('webcamVideo');
+    const captureBtn = document.getElementById('captureBtn');
+    const closeWebcamBtn = document.getElementById('closeWebcamBtn');
+    const previewDiv = document.getElementById('previewDiv');
+    const submitBtn = document.getElementById('submitBtn');
+    const loader = document.getElementById('loader');
+    const errorDiv = document.getElementById('error');
+    const resultDiv = document.getElementById('resultDiv');
+    const resetBtn = document.getElementById('resetBtn');
+
+    let imageBlob = null;
     let webcamStream = null;
 
-    document.getElementById('fileInput').addEventListener('change', function(e) {
-      selectedFile = e.target.files[0];
-      document.getElementById('error').textContent = '';
-      stopWebcam();
+    // Prompt for MJ V7 + omni reference
+    function getPrompt() {
+      return "You are using Midjourney v7 with omni reference. Use the reference image to exactly preserve the subject's face, skin, eyes, mouth, nose, ears, facial structure, ethnicity, gender, and all unique features. DO NOT change or stylize the face, head, body, pose, angle, or perspective at all. Do not add artifacts, do not change expressions, do not modify the subject. Only change clothing to ornate, historically accurate medieval knight armor, and set the background to a cinematic, realistic epic fantasy castle scene with beautiful, dramatic lighting. The output must look like a real photograph of the subject, not a painting, cartoon, or illustration. --no changing face, different person, altered face, stylized face, cartoon, painting, illustration, anime, AI artifact, bad anatomy, duplicate, face swap, new pose, extra limbs, missing limbs, watermark, text, extra fingers, rendered, avatar, low quality, smoothing, exaggerated, photobash, composite, filter, skin smoothing, avatar";
+    }
+
+    // Handle file selection
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) {
+        resetError();
+        previewDiv.innerHTML = "";
+        const file = fileInput.files[0];
+        const url = URL.createObjectURL(file);
+        previewDiv.innerHTML = `<img src="${url}"/><br><small>Preview</small>`;
+        previewDiv.style.display = "";
+        imageBlob = file;
+        submitBtn.disabled = false;
+      }
     });
 
-    // Webcam support
-    function startWebcam() {
-      navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
-        webcamStream = stream;
-        const video = document.getElementById('webcamVideo');
-        video.srcObject = stream;
-        video.style.display = 'block';
-        document.getElementById('captureBtn').style.display = 'inline-block';
-      }).catch(() => {
-        document.getElementById('error').textContent = 'Camera not available.';
-      });
-    }
-    function stopWebcam() {
-      const video = document.getElementById('webcamVideo');
-      video.style.display = 'none';
-      document.getElementById('captureBtn').style.display = 'none';
-      if(webcamStream) webcamStream.getTracks().forEach(t=>t.stop());
-    }
-    function captureWebcam() {
-      const video = document.getElementById('webcamVideo');
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
-      canvas.toBlob(blob=>{
-        selectedFile = new File([blob],'webcam.jpg',{type:'image/jpeg'});
-        document.getElementById('fileInput').value = "";
-        document.getElementById('error').textContent = '';
-        stopWebcam();
-      },'image/jpeg',0.95);
-    }
-
-    // Main upload/transform button logic
-    async function handleUpload() {
-      document.getElementById('error').textContent = '';
-      if(!selectedFile) {
-        document.getElementById('error').textContent = "Please upload a photo or take one with webcam.";
-        return;
-      }
-      document.getElementById('loading').style.display = '';
-      document.getElementById('uploadBtn').disabled = true;
-      document.getElementById('resultSection').style.display = 'none';
-
+    // Webcam setup
+    webcamBtn.onclick = async () => {
+      resetError();
+      webcamBtn.disabled = true;
+      webcamUI.style.display = "";
+      document.getElementById('uploadUI').style.display = "none";
+      previewDiv.style.display = "none";
+      resultDiv.style.display = "none";
+      submitBtn.disabled = true;
       try {
-        const formData = new FormData();
-        formData.append('file', selectedFile);
-
-        const resp = await fetch('/.netlify/functions/userapi-proxy-background', {
-          method: 'POST',
-          body: formData
-        });
-
-        if(!resp.ok) throw new Error("Server error. Please try again.");
-        const data = await resp.json();
-        if(data.imageUrl) {
-          document.getElementById('resultImage').src = data.imageUrl;
-          document.getElementById('downloadLink').href = data.imageUrl;
-          document.getElementById('resultSection').style.display = '';
-        } else {
-          throw new Error("No image returned. " + JSON.stringify(data));
-        }
-      } catch(err) {
-        document.getElementById('error').textContent = err.message;
-      } finally {
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('uploadBtn').disabled = false;
+        webcamStream = await navigator.mediaDevices.getUserMedia({video: true});
+        webcamVideo.srcObject = webcamStream;
+      } catch (e) {
+        showError("Could not access webcam.");
+        webcamBtn.disabled = false;
+        webcamUI.style.display = "none";
+        document.getElementById('uploadUI').style.display = "";
       }
+    };
+
+    closeWebcamBtn.onclick = () => {
+      stopWebcam();
+      webcamUI.style.display = "none";
+      document.getElementById('uploadUI').style.display = "";
+    };
+
+    captureBtn.onclick = () => {
+      // Capture image from video stream
+      let canvas = document.createElement('canvas');
+      canvas.width = webcamVideo.videoWidth;
+      canvas.height = webcamVideo.videoHeight;
+      let ctx = canvas.getContext('2d');
+      ctx.drawImage(webcamVideo, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        imageBlob = blob;
+        // Display preview
+        previewDiv.innerHTML = `<img src="${URL.createObjectURL(blob)}"/><br><small>Preview (from webcam)</small>`;
+        previewDiv.style.display = "";
+        submitBtn.disabled = false;
+      }, 'image/jpeg', 0.98);
+      stopWebcam();
+      webcamUI.style.display = "none";
+    };
+
+    function stopWebcam() {
+      if (webcamStream) {
+        webcamStream.getTracks().forEach(t => t.stop());
+        webcamStream = null;
+      }
+      webcamBtn.disabled = false;
     }
+
+    function resetError() {
+      errorDiv.style.display = "none";
+      errorDiv.textContent = "";
+    }
+    function showError(msg) {
+      errorDiv.textContent = msg;
+      errorDiv.style.display = "";
+    }
+
+    function showLoader(msg) {
+      loader.textContent = msg || "Processing...";
+      loader.style.display = "";
+      submitBtn.disabled = true;
+      resetBtn.style.display = "none";
+    }
+    function hideLoader() {
+      loader.style.display = "none";
+      submitBtn.disabled = false;
+    }
+
+    submitBtn.onclick = async () => {
+      if (!imageBlob) return showError("No image selected!");
+      resultDiv.style.display = "none";
+      resetError();
+      showLoader("Uploading and transforming...");
+      submitBtn.disabled = true;
+      // Send to backend
+      const formData = new FormData();
+      formData.append("image", imageBlob, "input.jpg");
+      formData.append("prompt", getPrompt());
+      try {
+        const resp = await fetch("/.netlify/functions/userapi-proxy-background", {
+          method: "POST",
+          body: formData,
+        });
+        let json;
+        try {
+          json = await resp.json();
+        } catch {
+          throw new Error("Server returned invalid response.");
+        }
+        if (!resp.ok || !json.success) {
+          showError("Failed: " + (json && json.error ? json.error : "Unknown error."));
+          hideLoader();
+          return;
+        }
+        // Show result
+        resultDiv.innerHTML = `<img src="${json.result}" alt="Knighted!" style="max-width:100%"/><br><a href="${json.result}" download="knight.jpg">Download</a>`;
+        resultDiv.style.display = "";
+        resetBtn.style.display = "";
+      } catch (err) {
+        showError("Network or server error: " + err.message);
+      } finally {
+        hideLoader();
+      }
+    };
+
+    resetBtn.onclick = () => {
+      window.location.reload();
+    };
   </script>
 </body>
 </html>
