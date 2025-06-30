@@ -1,0 +1,10 @@
+{
+  "name": "knight-app-working",
+  "version": "1.0.0",
+  "description": "Knight Photo Netlify Functions app with file upload and busboy",
+  "dependencies": {
+    "busboy": "^1.6.0",
+    "node-fetch": "^2.6.7",
+    "form-data": "^4.0.0"
+  }
+}
